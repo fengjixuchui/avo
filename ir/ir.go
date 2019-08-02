@@ -42,9 +42,10 @@ type Instruction struct {
 	Inputs  []operand.Op
 	Outputs []operand.Op
 
-	IsTerminal    bool
-	IsBranch      bool
-	IsConditional bool
+	IsTerminal       bool
+	IsBranch         bool
+	IsConditional    bool
+	CancellingInputs bool
 
 	// CFG.
 	Pred []*Instruction
@@ -87,6 +88,9 @@ func (i Instruction) InputRegisters() []reg.Register {
 	var rs []reg.Register
 	for _, op := range i.Inputs {
 		rs = append(rs, operand.Registers(op)...)
+	}
+	if i.CancellingInputs && rs[0] == rs[1] {
+		rs = []reg.Register{}
 	}
 	for _, op := range i.Outputs {
 		if operand.IsMem(op) {
@@ -210,6 +214,18 @@ func (f *Function) Instructions() []*Instruction {
 		}
 	}
 	return is
+}
+
+// Labels returns just the list of label nodes.
+func (f *Function) Labels() []Label {
+	var lbls []Label
+	for _, n := range f.Nodes {
+		lbl, ok := n.(Label)
+		if ok {
+			lbls = append(lbls, lbl)
+		}
+	}
+	return lbls
 }
 
 // Stub returns the Go function declaration.
